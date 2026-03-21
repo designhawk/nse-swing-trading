@@ -35,6 +35,7 @@ ENV/
 # Experiment logs
 experiments.json
 experiments.log
+strategy_backups/
 
 # OS
 .DS_Store
