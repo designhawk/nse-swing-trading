@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python auto_research.py --max 2)",
+      "Bash(python:*)",
+      "WebSearch"
+    ]
+  }
+}
