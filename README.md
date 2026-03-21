@@ -101,9 +101,11 @@ python experiment_runner.py --exp exp1 --desc "Your changes here"
 #    If score got worse -> revert
 ```
 
-### Using Autoresearch (No /autoresearch skill needed)
+### Using Autoresearch
 
-We provide **two options** for autonomous research:
+**Note:** The `/autoresearch` skill mentioned in the original crypto repo requires special setup and is NOT available by default. 
+
+Instead, we provide **three options** for autonomous research:
 
 #### Option 1: Python Script (Cross-platform, Recommended)
 
@@ -155,6 +157,8 @@ Read results.tsv
 
 # Ask Claude to suggest and implement a modification
 "Please analyze the current strategy and suggest one specific parameter change to improve the Sharpe ratio. Implement it and run a backtest."
+
+**Note:** This is INTERACTIVE use of Claude Code, NOT the `/autoresearch` skill. The `/autoresearch` skill requires special installation and setup that is NOT included here. Use Option 1 (Python script) for fully autonomous research without human intervention.
 
 # After Claude edits and runs backtest, check results
 python experiment_runner.py --exp exp1 --desc "Modification suggested by Claude"

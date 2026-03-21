@@ -70,12 +70,32 @@ commit	score	sharpe	max_dd	return	trades	status	description
 
 ## The experiment loop
 
-### Automated (recommended)
+### Automated (Recommended - No /autoresearch skill needed!)
+
+**IMPORTANT:** The `/autoresearch` skill from the original crypto repo requires special Claude Code setup and is NOT available here. 
+
+Instead, use our Python script which provides the SAME functionality:
 
 ```bash
-# Run 50 experiments automatically
+# Run 50 experiments automatically (no human intervention)
 python auto_research.py --max 50
+
+# Or run indefinitely until Ctrl+C
+python auto_research.py
+
+# Or run for a specific time
+python auto_research.py --budget 3600  # 1 hour
 ```
+
+**What it does:**
+1. Reads current strategy and scores
+2. Proposes and implements a modification to strategy.py
+3. Runs `python backtest.py` and parses the score
+4. Keeps the change if score improved, reverts if not
+5. Repeats indefinitely until interrupted
+6. Saves best strategy to `strategy_best.py`
+
+This is EXACTLY what `/autoresearch` does, but as a standalone Python script!
 
 ### Manual with git
 
