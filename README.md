@@ -103,9 +103,42 @@ python experiment_runner.py --exp exp1 --desc "Your changes here"
 
 ### Using Autoresearch
 
-**Note:** The `/autoresearch` skill mentioned in the original crypto repo requires special setup and is NOT available by default. 
+We provide **four options** for autonomous research, from fully automated to interactive:
 
-Instead, we provide **three options** for autonomous research:
+#### Option 1: Claude Code Skill `/autoresearch` (True Autonomous Research)
+
+**This replicates the original crypto repo experience!**
+
+1. **Install the skill:**
+   ```bash
+   # Copy the skill file to Claude Code skills directory
+   cp autoresearch.md ~/.claude/skills/
+   ```
+
+2. **Start Claude Code:**
+   ```bash
+   cd auto-researchtrading-india
+   claude
+   ```
+
+3. **Launch autonomous research:**
+   ```
+   /autoresearch
+   ```
+
+**What happens:**
+- Claude reads the current strategy and documentation
+- Autonomously proposes modifications
+- Runs backtests automatically
+- Keeps improvements, reverts failures
+- **Continues indefinitely until you press Ctrl+C**
+- **Never asks for permission** - fully autonomous!
+
+**This is the exact workflow from the original crypto repo!**
+
+---
+
+#### Option 2: Python Script (Cross-platform, No Claude Code needed)
 
 #### Option 1: Python Script (Cross-platform, Recommended)
 
@@ -131,7 +164,7 @@ python auto_research.py --restore
 5. ✅ Saves best to `strategy_best.py`
 6. ✅ Logs to `experiments.json`
 
-#### Option 2: Bash Script (Unix/Linux/macOS/Git Bash)
+#### Option 3: Bash Script (Unix/Linux/macOS/Git Bash)
 
 ```bash
 # Make executable and run
@@ -141,9 +174,9 @@ chmod +x autoresearch.sh
 
 **Requirements:** Git Bash (Windows), bc command
 
-#### Option 3: Interactive with Claude Code
+#### Option 4: Interactive with Claude Code
 
-If you prefer using Claude Code interactively:
+If you prefer using Claude Code interactively (manual guidance):
 
 ```bash
 # Start Claude Code
@@ -157,8 +190,6 @@ Read results.tsv
 
 # Ask Claude to suggest and implement a modification
 "Please analyze the current strategy and suggest one specific parameter change to improve the Sharpe ratio. Implement it and run a backtest."
-
-**Note:** This is INTERACTIVE use of Claude Code, NOT the `/autoresearch` skill. The `/autoresearch` skill requires special installation and setup that is NOT included here. Use Option 1 (Python script) for fully autonomous research without human intervention.
 
 # After Claude edits and runs backtest, check results
 python experiment_runner.py --exp exp1 --desc "Modification suggested by Claude"
