@@ -58,7 +58,7 @@ BASE_THRESHOLD = 0.012         # Momentum threshold (1.2%)
 
 # Position management
 COOLDOWN_BARS = 3              # Bars to wait after exit
-MIN_VOTES = 4                  # Minimum votes for signal (out of 6)
+MIN_VOTES = 3                  # Minimum votes for signal (out of 6)
 
 
 def ema(values, span):

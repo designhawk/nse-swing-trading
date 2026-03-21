@@ -36,14 +36,14 @@ LONG_WINDOW = 30      # 1.5 months
 EMA_FAST = 5
 EMA_SLOW = 26
 RSI_PERIOD = 8
-RSI_BULL = 55
+RSI_BULL = 50
 RSI_BEAR = 55
 RSI_OVERBOUGHT = 69
 RSI_OVERSOLD = 31
 
 MACD_FAST = 16
 MACD_SLOW = 21
-MACD_SIGNAL = 12
+MACD_SIGNAL = 9
 
 BB_PERIOD = 7
 
@@ -57,7 +57,7 @@ TAKE_PROFIT_PCT = 99.0         # Take profit (disabled with 99%)
 BASE_THRESHOLD = 0.012         # Momentum threshold (1.2%)
 
 # Position management
-COOLDOWN_BARS = 3              # Bars to wait after exit
+COOLDOWN_BARS = 1              # Bars to wait after exit
 MIN_VOTES = 4                  # Minimum votes for signal (out of 6)
 
 

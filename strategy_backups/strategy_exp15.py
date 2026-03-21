@@ -57,8 +57,8 @@ TAKE_PROFIT_PCT = 99.0         # Take profit (disabled with 99%)
 BASE_THRESHOLD = 0.012         # Momentum threshold (1.2%)
 
 # Position management
-COOLDOWN_BARS = 3              # Bars to wait after exit
-MIN_VOTES = 4                  # Minimum votes for signal (out of 6)
+COOLDOWN_BARS = 1              # Bars to wait after exit
+MIN_VOTES = 3                  # Minimum votes for signal (out of 6)
 
 
 def ema(values, span):
