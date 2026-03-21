@@ -24,9 +24,10 @@ sys.path.insert(0, str(Path(__file__).parent))
 from prepare import load_data, run_backtest, compute_score, INITIAL_CAPITAL
 from strategy import Strategy
 
-EXPERIMENTS_FILE = "experiments.json"
-BEST_STRATEGY_FILE = "strategy_best.py"
-BACKUP_DIR = "strategy_backups"
+RESEARCH_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "research")
+EXPERIMENTS_FILE = os.path.join(RESEARCH_DIR, "experiments.json")
+BEST_STRATEGY_FILE = os.path.join(RESEARCH_DIR, "strategy_best.py")
+BACKUP_DIR = os.path.join(RESEARCH_DIR, "strategy_backups")
 
 # Strategy modification ideas
 PARAMETER_MODIFICATIONS = [
@@ -185,7 +186,7 @@ def run_single_experiment(exp_num):
     best_score = get_best_score()
     
     if score > best_score:
-        print(f"\n✅ IMPROVEMENT! {score:.6f} > {best_score:.6f}")
+        print(f"\n[IMPROVEMENT] {score:.6f} > {best_score:.6f}")
         
         # Save as best strategy
         shutil.copy("strategy.py", BEST_STRATEGY_FILE)
@@ -213,7 +214,7 @@ def run_single_experiment(exp_num):
         return score
         
     else:
-        print(f"\n❌ No improvement. {score:.6f} <= {best_score:.6f}")
+        print(f"\n[NO IMPROVEMENT] {score:.6f} <= {best_score:.6f}")
         print("Reverting changes...")
         
         # Restore backup

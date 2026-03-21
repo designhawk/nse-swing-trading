@@ -1,39 +1,46 @@
 """
-Run backtest for Indian NSE stocks. Usage: python backtest.py
-Imports strategy from strategy.py, runs on validation data, prints metrics.
-This file is fixed — do not modify.
+Run backtest for Indian NSE stocks.
+Usage:
+  python backtest.py               # validation set (default)
+  python backtest.py --split train # training set
+  python backtest.py --split test  # test set (2025, use sparingly!)
 """
 
 import time
+import argparse
 import signal as sig
 
 from prepare import load_data, run_backtest, compute_score, TIME_BUDGET
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--split", default="val", choices=["train", "val", "test"],
+                    help="Data split to evaluate on (default: val)")
+args = parser.parse_args()
 
 # Timeout guard
 def timeout_handler(signum, frame):
     print("TIMEOUT: backtest exceeded time budget")
     exit(1)
 
-# Note: signal.SIGALRM is not available on Windows, so we use a different approach
 try:
     sig.signal(sig.SIGALRM, timeout_handler)
-    sig.alarm(TIME_BUDGET + 30)  # 30s grace for startup
+    sig.alarm(TIME_BUDGET + 30)
 except AttributeError:
-    # Windows doesn't have SIGALRM, we'll use a simpler timeout mechanism
-    pass
+    pass  # Windows: no SIGALRM
 
 t_start = time.time()
 
 from strategy import Strategy
 
 strategy = Strategy()
-data = load_data("val")
+data = load_data(args.split)
 
 if not data:
     print("\nError: No data loaded!")
     print("Please run 'python prepare.py' first to download historical data.")
     exit(1)
 
+print(f"Split: {args.split}")
 print(f"Loaded {sum(len(df) for df in data.values())} bars across {len(data)} symbols")
 print(f"Symbols: {list(data.keys())}")
 print()

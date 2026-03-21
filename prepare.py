@@ -26,15 +26,17 @@ import pyarrow.parquet as pq
 
 TIME_BUDGET = 120              # backtest time budget in seconds (2 minutes)
 INITIAL_CAPITAL = 1_000_000.0  # ₹10 Lakhs starting capital
-MAKER_FEE = 0.0002             # 2 bps (approximate for Indian brokers)
-TAKER_FEE = 0.0005             # 5 bps (approximate for Indian brokers)
-SLIPPAGE_BPS = 1.0             # 1 bps simulated slippage
+BROKERAGE_PER_TRADE = 20.0     # Zerodha flat Rs 20/order (buy and sell)
+EXCHANGE_CHARGE_BPS = 3.5      # NSE transaction charges ~3.5 bps
+STT_SELL_BPS = 10.0            # STT 0.1% on sell side only (delivery equity)
+SLIPPAGE_BPS = 5.0             # Realistic daily bar slippage
 MAX_LEVERAGE = 1               # No leverage for cash market (1x)
 LOOKBACK_BARS = 500            # history buffer provided to strategy
 BAR_INTERVAL = "1d"            # Daily bars
 
-# 10 Large-cap NSE stocks
+# Nifty 50 large-cap NSE stocks
 SYMBOLS = [
+    # Original 10
     "RELIANCE.NS",   # Reliance Industries
     "TCS.NS",        # Tata Consultancy Services
     "HDFCBANK.NS",   # HDFC Bank
@@ -44,7 +46,49 @@ SYMBOLS = [
     "ITC.NS",        # ITC Limited
     "SBIN.NS",       # State Bank of India
     "BHARTIARTL.NS", # Bharti Airtel
-    "KOTAKBANK.NS"   # Kotak Mahindra Bank
+    "KOTAKBANK.NS",  # Kotak Mahindra Bank
+    # Nifty 50 additions
+    "ADANIENT.NS",   # Adani Enterprises
+    "ADANIPORTS.NS", # Adani Ports
+    "APOLLOHOSP.NS", # Apollo Hospitals
+    "ASIANPAINT.NS", # Asian Paints
+    "AXISBANK.NS",   # Axis Bank
+    "BAJAJ-AUTO.NS", # Bajaj Auto
+    "BAJAJFINSV.NS", # Bajaj Finserv
+    "BAJFINANCE.NS", # Bajaj Finance
+    "BPCL.NS",       # BPCL
+    "BRITANNIA.NS",  # Britannia Industries
+    "CIPLA.NS",      # Cipla
+    "COALINDIA.NS",  # Coal India
+    "DIVISLAB.NS",   # Divi's Laboratories
+    "DRREDDY.NS",    # Dr. Reddy's
+    "EICHERMOT.NS",  # Eicher Motors
+    "GRASIM.NS",     # Grasim Industries
+    "HCLTECH.NS",    # HCL Technologies
+    "HDFCLIFE.NS",   # HDFC Life
+    "HEROMOTOCO.NS", # Hero MotoCorp
+    "HINDALCO.NS",   # Hindalco Industries
+    "INDUSINDBK.NS", # IndusInd Bank
+    "JSWSTEEL.NS",   # JSW Steel
+    "LT.NS",         # Larsen & Toubro
+    "LTIM.NS",       # LTIMindtree
+    "M&M.NS",        # Mahindra & Mahindra
+    "MARUTI.NS",     # Maruti Suzuki
+    "NESTLEIND.NS",  # Nestle India
+    "NTPC.NS",       # NTPC
+    "ONGC.NS",       # ONGC
+    "POWERGRID.NS",  # Power Grid Corp
+    "SBILIFE.NS",    # SBI Life Insurance
+    "SHRIRAMFIN.NS", # Shriram Finance
+    "SUNPHARMA.NS",  # Sun Pharma
+    "TATACONSUM.NS", # Tata Consumer Products
+    "TATAMOTORS.NS",  # Tata Motors (Yahoo Finance sometimes fails — skip if no data)
+    "TATASTEEL.NS",  # Tata Steel
+    "TECHM.NS",      # Tech Mahindra
+    "TITAN.NS",      # Titan Company
+    "TRENT.NS",      # Trent
+    "ULTRACEMCO.NS", # UltraTech Cement
+    "WIPRO.NS",      # Wipro
 ]
 
 # Date splits (5 years: 2019-2024)
@@ -53,7 +97,7 @@ TRAIN_END = "2023-01-01"
 VAL_START = "2023-01-01"
 VAL_END = "2024-12-31"
 TEST_START = "2025-01-01"
-TEST_END = "2025-12-31"
+TEST_END = "2026-12-31"
 
 DAYS_PER_YEAR = 252            # NSE trading days per year
 
@@ -286,6 +330,7 @@ def run_backtest(strategy, data: dict) -> BacktestResult:
     trade_log = []
     total_volume = 0.0
     prev_equity = INITIAL_CAPITAL
+    pending_signals = []  # signals from previous bar, executed at this bar's open
 
     # History buffers
     history_buffers = {symbol: [] for symbol in data}
@@ -337,36 +382,16 @@ def run_backtest(strategy, data: dict) -> BacktestResult:
         if not bar_data:
             continue
 
-        # Update portfolio equity (mark-to-market)
-        unrealized_pnl = 0.0
-        for sym, pos_notional in portfolio.positions.items():
-            if sym in bar_data:
-                current_price = bar_data[sym].close
-                entry_price = portfolio.entry_prices.get(sym, current_price)
-                if entry_price > 0:
-                    price_change = (current_price - entry_price) / entry_price
-                    unrealized_pnl += pos_notional * price_change
-
-        portfolio.equity = portfolio.cash + sum(abs(v) for v in portfolio.positions.values()) + unrealized_pnl
-
-        # No funding rates for stocks (removed crypto logic)
-
-        # Get signals from strategy
-        try:
-            signals = strategy.on_bar(bar_data, portfolio)
-        except Exception as e:
-            signals = []
-
-        # Execute signals
-        for sig in (signals or []):
+        # === STEP 1: Execute PREVIOUS bar's signals at today's OPEN price ===
+        for sig in pending_signals:
             if sig.symbol not in bar_data:
                 continue
 
-            current_price = bar_data[sig.symbol].close
+            open_price = bar_data[sig.symbol].open  # next-bar open execution
             current_pos = portfolio.positions.get(sig.symbol, 0.0)
             delta = sig.target_position - current_pos
 
-            if abs(delta) < 10.0:  # < ₹10 change, skip
+            if abs(delta) < 10.0:  # < Rs 10 change, skip
                 continue
 
             # Check leverage constraint (1x for cash market)
@@ -376,19 +401,23 @@ def run_backtest(strategy, data: dict) -> BacktestResult:
             if total_exposure > portfolio.equity * MAX_LEVERAGE:
                 continue
 
-            # Apply slippage and fees
-            slippage = current_price * SLIPPAGE_BPS / 10000
-            fee_rate = TAKER_FEE
+            # Apply slippage (at open price)
+            slippage = open_price * SLIPPAGE_BPS / 10000
             if delta > 0:  # buying
-                exec_price = current_price + slippage
+                exec_price = open_price + slippage
             else:  # selling
-                exec_price = current_price - slippage
+                exec_price = open_price - slippage
 
-            fee = abs(delta) * fee_rate
+            # Indian NSE costs: flat brokerage + exchange charges + STT on sells
+            trade_notional = abs(delta)
+            fee = BROKERAGE_PER_TRADE + trade_notional * EXCHANGE_CHARGE_BPS / 10000
+            if delta < 0:  # sell side: Securities Transaction Tax
+                fee += trade_notional * STT_SELL_BPS / 10000
             portfolio.cash -= fee
-            total_volume += abs(delta)
+            total_volume += trade_notional
 
             # Update position
+            pnl = 0.0
             if sig.target_position == 0:
                 # Closing position — realize PnL
                 if sig.symbol in portfolio.entry_prices:
@@ -399,7 +428,7 @@ def run_backtest(strategy, data: dict) -> BacktestResult:
                     del portfolio.entry_prices[sig.symbol]
                 if sig.symbol in portfolio.positions:
                     del portfolio.positions[sig.symbol]
-                trade_log.append(("close", sig.symbol, delta, exec_price, pnl if 'pnl' in dir() else 0))
+                trade_log.append(("close", sig.symbol, delta, exec_price, pnl))
             else:
                 if current_pos == 0:
                     # Opening new position
@@ -411,41 +440,48 @@ def run_backtest(strategy, data: dict) -> BacktestResult:
                     # Modifying position
                     old_notional = abs(current_pos)
                     old_entry = portfolio.entry_prices.get(sig.symbol, exec_price)
-                    # Realize PnL on reduced portion
                     if abs(sig.target_position) < abs(current_pos):
                         reduced = abs(current_pos) - abs(sig.target_position)
                         if old_entry > 0:
                             pnl = (current_pos / abs(current_pos)) * reduced * (exec_price - old_entry) / old_entry
                         else:
-                            pnl = 0
+                            pnl = 0.0
                         portfolio.cash += reduced + pnl
                     elif abs(sig.target_position) > abs(current_pos):
                         added = abs(sig.target_position) - abs(current_pos)
                         portfolio.cash -= added
-                        # Weighted average entry
                         if old_notional + added > 0:
                             new_entry = (old_entry * old_notional + exec_price * added) / (old_notional + added)
                             portfolio.entry_prices[sig.symbol] = new_entry
                     portfolio.positions[sig.symbol] = sig.target_position
                     trade_log.append(("modify", sig.symbol, delta, exec_price, 0))
 
-        # Recalculate equity after trades
+        pending_signals = []
+
+        # === STEP 2: Mark-to-market at CLOSE, record equity ===
         unrealized_pnl = 0.0
         for sym, pos_notional in portfolio.positions.items():
             if sym in bar_data:
-                current_price = bar_data[sym].close
-                entry_price = portfolio.entry_prices.get(sym, current_price)
+                close_price = bar_data[sym].close
+                entry_price = portfolio.entry_prices.get(sym, close_price)
                 if entry_price > 0:
-                    price_change = (current_price - entry_price) / entry_price
+                    price_change = (close_price - entry_price) / entry_price
                     unrealized_pnl += pos_notional * price_change
 
         current_equity = portfolio.cash + sum(abs(v) for v in portfolio.positions.values()) + unrealized_pnl
+        portfolio.equity = current_equity
         equity_curve.append(current_equity)
 
         # Daily return
         if prev_equity > 0:
             daily_returns.append((current_equity - prev_equity) / prev_equity)
         prev_equity = current_equity
+
+        # === STEP 3: Generate signals for NEXT bar (buffered, not executed yet) ===
+        try:
+            pending_signals = strategy.on_bar(bar_data, portfolio) or []
+        except Exception:
+            pending_signals = []
 
         # Liquidation check
         if current_equity < INITIAL_CAPITAL * 0.01:

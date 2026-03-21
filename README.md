@@ -1,342 +1,261 @@
-# Auto-Research Trading - India Edition
+# NSE Swing Trading Research Tool
 
-Autonomous trading strategy research framework adapted for Indian NSE stocks (large-cap leaders).
+Autonomous strategy research + daily signal generator for Indian NSE stocks.
 
-## Features
+**What this does:**
+- Runs backtests on 7 years of Nifty 50 data with realistic Indian costs (STT, brokerage, slippage)
+- Auto-experiments with strategy parameters overnight to find improvements
+- Generates a daily "what to buy/sell tomorrow" signal report
 
-- **10 Large-cap NSE Stocks**: RELIANCE, TCS, HDFCBANK, INFY, ICICIBANK, HINDUNILVR, ITC, SBIN, BHARTIARTL, KOTAKBANK
-- **Daily Timeframe**: Optimized for swing/positional trading
-- **5 Years Historical Data**: 2019-2024 for robust backtesting
-- **₹10 Lakhs Starting Capital**: Realistic for Indian retail traders
-- **Multi-signal Ensemble Strategy**: Momentum, EMA, RSI, MACD, Bollinger Bands
-- **Built-in Experiment Tracker**: Log and compare strategy variations
+**What this is NOT:**
+- Not a live trading system — it does not connect to any broker
+- Not financial advice — all signals require your own judgement before acting
 
-## Quick Start
+---
 
-### 1. Install Dependencies
+## Quick Start (First Time)
 
 ```bash
-# Install uv if you don't have it
-curl -LsSf https://astral.sh/uv/install.sh | bash  # macOS/Linux
-# Or download from https://github.com/astral-sh/uv/releases for Windows
-
-# Install dependencies
-uv pip install -e .
-```
-
-Or with pip:
-```bash
+# 1. Install dependencies
 pip install -e .
-```
 
-### 2. Download Historical Data
-
-```bash
+# 2. Download Nifty 50 historical data (2019–today, ~2 minutes)
 python prepare.py
-```
 
-This downloads 5 years of daily OHLCV data from Yahoo Finance for all 10 stocks.
-
-### 3. Run Backtest
-
-```bash
-python backtest.py
-```
-
-Expected output:
-```
-Loaded ~1500 bars across 10 symbols
-Symbols: ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', ...]
-
----
-score:              X.XXXXXX
-sharpe:             X.XXXXXX
-total_return_pct:   XX.XXXXXX
-max_drawdown_pct:   X.XXXXXX
-num_trades:         XXX
-...
-```
-
-### 4. Run Experiments
-
-```bash
-# Run with auto-generated experiment name
-python experiment_runner.py
-
-# Run with specific name and description
-python experiment_runner.py --exp exp1 --desc "Increased RSI period to 14"
-
-# View all experiments
-python experiment_runner.py --list
-
-# View best experiment
-python experiment_runner.py --best
-```
-
-## Strategy Development
-
-### Rules
-
-1. **Only edit `strategy.py`** - This is the single mutable file
-2. **Do not modify** `prepare.py`, `backtest.py`, or other core files
-3. **No new dependencies** - Only use: numpy, pandas, scipy, yfinance, pytz
-4. **Time budget** - 120 seconds per backtest
-
-### Manual Experiment Loop
-
-```bash
-# 1. Create a git branch for your experiment
-git checkout -b experiment/my-idea
-
-# 2. Edit strategy.py with your idea
-#    - Change parameters, add signals, modify entry/exit logic
-
-# 3. Run the backtest
+# 3. Verify everything works
 python backtest.py
 
-# 4. Log the experiment
-python experiment_runner.py --exp exp1 --desc "Your changes here"
-
-# 5. If score improved -> commit
-#    If score got worse -> revert
+# 4. See today's signals
+python signals.py
 ```
-
-### Using Autoresearch
-
-We provide **four options** for autonomous research, from fully automated to interactive:
-
-#### Option 1: Claude Code Skill `/autoresearch` (True Autonomous Research)
-
-**This replicates the original crypto repo experience!**
-
-1. **Install the skill:**
-   ```bash
-   # Copy the skill file to Claude Code skills directory
-   cp autoresearch.md ~/.claude/skills/
-   ```
-
-2. **Start Claude Code:**
-   ```bash
-   cd auto-researchtrading-india
-   claude
-   ```
-
-3. **Launch autonomous research:**
-   ```
-   /autoresearch
-   ```
-
-**What happens:**
-- Claude reads the current strategy and documentation
-- Autonomously proposes modifications
-- Runs backtests automatically
-- Keeps improvements, reverts failures
-- **Continues indefinitely until you press Ctrl+C**
-- **Never asks for permission** - fully autonomous!
-
-**This is the exact workflow from the original crypto repo!**
 
 ---
 
-#### Option 2: Python Script (Cross-platform, No Claude Code needed)
+## Daily Workflow (Every Trading Day)
 
-#### Option 1: Python Script (Cross-platform, Recommended)
+**Each morning before market open (9:15 AM IST):**
 
 ```bash
-# Run indefinitely (press Ctrl+C to stop)
-python auto_research.py
+python signals.py --refresh
+```
 
-# Run max 50 experiments
+The `--refresh` flag downloads last night's closing prices. Output:
+
+```
+==============================================================
+  NSE SWING SIGNALS
+  Based on: 2026-03-21 close prices
+  Execute:  Next trading day at market open (~9:15 AM IST)
+==============================================================
+
+  BUY at market open  (2 stocks)
+  ---------------------------------------------------------------
+  Stock               Last Close    Suggested Size*
+  ---------------------------------------------------------------
+  HCLTECH.NS          Rs  1,603.58  Rs 20,000 (~12 shares)
+  NTPC.NS             Rs    380.95  Rs 20,000 (~52 shares)
+
+  EXIT: No exits signaled today.
+
+  TIP: To see stop prices for stocks you own, run:
+  python signals.py --held RELIANCE.NS TCS.NS
+```
+
+**If you own stocks, track your stops:**
+
+```bash
+python signals.py --held RELIANCE.NS HCLTECH.NS NTPC.NS
+```
+
+This shows exactly what price each stock needs to fall below before you exit.
+
+**Sizing your positions:**
+- Default model assumes Rs 10 Lakhs capital, 2% per stock = Rs 20,000 per position
+- If your capital is different, scale proportionally:
+  - Rs 5L capital → Rs 10,000 per stock
+  - Rs 20L capital → Rs 40,000 per stock
+  - Rs 1L capital → Rs 2,000 per stock (but costs will bite harder at small sizes)
+
+---
+
+## How the Strategy Works
+
+Long-only swing trading on Nifty 50 stocks, daily timeframe.
+
+**Entry:** A stock gets a buy signal when 4 out of 5 indicators agree:
+1. Medium-term momentum (8-day return above threshold)
+2. Short-term momentum (5-day return above threshold)
+3. EMA crossover (EMA-7 above EMA-30)
+4. RSI(14) above 60 (stock has momentum, not overbought)
+5. MACD histogram positive
+
+**Exit (whichever comes first):**
+- Trailing stop: price falls more than 5.5× ATR below the peak
+- RSI overbought: RSI(14) exceeds 70
+
+**Why long-only?**
+Short selling requires holding overnight positions in NSE cash equity, which is illegal. This strategy only buys.
+
+**Execution:**
+Signals fire at the day's close → you execute at the NEXT day's market open. No same-day magic.
+
+**Costs modelled:**
+- Rs 20 flat brokerage per trade (Zerodha model)
+- 3.5 bps NSE exchange charges
+- **0.1% STT on every sell** (this is real, mandatory, and significant)
+- 5 bps slippage
+
+---
+
+## Files — What to Use When
+
+| File | When to use |
+|------|-------------|
+| `signals.py` | **Every trading day** — get buy/sell/stop signals |
+| `backtest.py` | After editing `strategy.py` — check if change improved score |
+| `auto_research.py` | Overnight — let it automatically find better parameters |
+| `strategy.py` | Edit this to try new ideas |
+| `tools/run_benchmarks.py` | Compare strategy vs buy-and-hold, momentum, mean-reversion |
+| `prepare.py` | One-time data download; run again to add new symbols |
+| `tools/export_equity.py` | Export equity curve to CSV for Excel/analysis |
+
+**Files you should never edit:**
+- `prepare.py` — backtest engine and cost model (changing it invalidates all experiment history)
+- `backtest.py` — entry point (fixed interface)
+- `benchmarks/` — reference strategies to compare against
+
+---
+
+## Improving the Strategy
+
+The current strategy has **Sharpe ~2.1** on the 2023–2024 validation period with honest costs. To try to improve it:
+
+### Option A — Overnight auto-search (recommended)
+
+```bash
+# Run 50 experiments automatically, keep improvements
 python auto_research.py --max 50
 
-# Run for 1 hour
-python auto_research.py --budget 3600
+# Or run indefinitely
+python auto_research.py
 
-# Restore best strategy later
-python auto_research.py --restore
+# Check results next morning
+python auto_research.py --restore   # apply best found strategy
 ```
 
-**What it does:**
-1. ✅ Automatically modifies `strategy.py` parameters
-2. ✅ Runs backtest
-3. ✅ Keeps if score improves
-4. ✅ Reverts if worse
-5. ✅ Saves best to `strategy_best.py`
-6. ✅ Logs to `experiments.json`
+The script randomly modifies one parameter at a time, runs a backtest, keeps the change if it improved the score, reverts if not. Results are saved to `research/experiments.json`.
 
-#### Option 3: Bash Script (Unix/Linux/macOS/Git Bash)
+### Option B — Manual experiment
 
 ```bash
-# Make executable and run
-chmod +x autoresearch.sh
-./autoresearch.sh
+# 1. Edit strategy.py — change one parameter
+# 2. Run backtest
+python backtest.py
+
+# 3. If score improved, keep. If not, restore:
+git checkout strategy.py
 ```
 
-**Requirements:** Git Bash (Windows), bc command
-
-#### Option 4: Interactive with Claude Code
-
-If you prefer using Claude Code interactively (manual guidance):
-
-```bash
-# Start Claude Code
-claude
-```
-
-Then inside Claude Code:
-```
-Read strategy.py
-Read results.tsv
-
-# Ask Claude to suggest and implement a modification
-"Please analyze the current strategy and suggest one specific parameter change to improve the Sharpe ratio. Implement it and run a backtest."
-
-# After Claude edits and runs backtest, check results
-python experiment_runner.py --exp exp1 --desc "Modification suggested by Claude"
-```
-
-## Strategy Architecture
-
-### Current Baseline Strategy
-
-**Multi-signal ensemble with majority voting:**
-
-| Signal | Bull Condition | Bear Condition |
-|--------|----------------|----------------|
-| Momentum | 10-day return > threshold | 10-day return < -threshold |
-| Very-short momentum | 5-day return > threshold×0.7 | 5-day return < -threshold×0.7 |
-| EMA crossover | EMA(7) > EMA(26) | EMA(7) < EMA(26) |
-| RSI(8) | RSI > 50 | RSI < 50 |
-| MACD(14,23,9) | MACD histogram > 0 | MACD histogram < 0 |
-| BB compression | BB width < 85th percentile | BB width < 85th percentile |
-
-**Entry:** 4 out of 6 signals must agree
-
-**Exit conditions (priority order):**
-1. **ATR trailing stop** - 5.5x ATR from peak/trough
-2. **RSI mean-reversion** - Exit longs at RSI > 69, exit shorts at RSI < 31
-3. **Signal flip** - Reverse when opposing ensemble fires
-
-### Key Parameters
+### Parameters worth tuning (in strategy.py)
 
 ```python
-BASE_POSITION_PCT = 0.10    # 10% per stock (max 100% invested)
-COOLDOWN_BARS = 2           # Wait 2 days after exit
-RSI_PERIOD = 8              # Fast RSI for daily data
-ATR_STOP_MULT = 5.5         # Wide stop to let winners run
-MIN_VOTES = 4               # 4 of 6 signals needed
+MIN_VOTES = 4           # Raise to 5 for fewer, higher-conviction trades
+ATR_STOP_MULT = 5.5     # Lower = tighter stops = less drawdown but more exits
+RSI_BULL = 60           # Raise = stricter entry, fewer trades
+COOLDOWN_BARS = 3       # Days to wait before re-entering a stock after exit
+EMA_SLOW = 30           # Longer = smoother trend filter
 ```
 
-## Data
+**Rule:** change one thing at a time. If two things change, you won't know which one helped.
 
-### Symbols
-- **RELIANCE.NS** - Reliance Industries (Energy, Telecom, Retail)
-- **TCS.NS** - Tata Consultancy Services (IT)
-- **HDFCBANK.NS** - HDFC Bank (Banking)
-- **INFY.NS** - Infosys (IT)
-- **ICICIBANK.NS** - ICICI Bank (Banking)
-- **HINDUNILVR.NS** - Hindustan Unilever (FMCG)
-- **ITC.NS** - ITC Limited (FMCG, Hotels, Paper)
-- **SBIN.NS** - State Bank of India (Banking)
-- **BHARTIARTL.NS** - Bharti Airtel (Telecom)
-- **KOTAKBANK.NS** - Kotak Mahindra Bank (Banking)
+### Check out-of-sample performance
 
-### Date Ranges
-- **Training**: 2019-01-01 to 2023-01-01 (4 years)
-- **Validation**: 2023-01-01 to 2024-12-31 (2 years)
-- **Test**: 2025-01-01 onwards (out-of-sample)
+Once you've tuned on the validation set, run on the test set (2025 data) to see real out-of-sample performance:
 
-### Data Source
-Yahoo Finance (via yfinance library) - Free, reliable daily data for NSE stocks.
+```bash
+python backtest.py --split test
+```
 
-## Scoring
+**Important:** only check the test set occasionally. If you run it repeatedly and tune towards it, it stops being out-of-sample.
+
+---
+
+## Understanding the Backtest Score
 
 ```
 score = sharpe × √(min(trades/50, 1.0)) − drawdown_penalty − turnover_penalty
-
-Where:
-- sharpe: Annualized Sharpe ratio (252 trading days)
-- drawdown_penalty: max(0, max_drawdown_pct − 15%) × 0.05
-- turnover_penalty: max(0, annual_turnover/capital − 500) × 0.001
-
-Hard cutoffs (→ score = -999):
-- Fewer than 10 trades
-- Max drawdown > 50%
-- Lost > 50% of capital
 ```
+
+- **Higher is better**
+- Score roughly equals Sharpe when you have 50+ trades and low drawdown
+- Honest Sharpe of **1.5–2.5** is good for a real daily strategy (the old inflated 8.0 was fake)
+- If score suddenly jumps above 4, check for bugs — likely overfitting
+
+```bash
+# Current honest baseline on validation (2023–2024):
+# score: ~2.1  sharpe: ~2.1  return: ~37%  max_dd: ~7%  trades: ~2172
+```
+
+---
+
+## Data
+
+- **Source:** Yahoo Finance (free, adjusted for splits/dividends)
+- **Universe:** 49 Nifty 50 stocks (TATAMOTORS.NS excluded — Yahoo Finance issues)
+- **History:** 2019–present (auto-updated when you run `--refresh`)
+- **Splits:**
+  - Train: 2019–2022 (strategy development)
+  - Validation: 2023–2024 (used by auto_research to find parameters)
+  - Test: 2025–present (out-of-sample, use sparingly)
+
+---
 
 ## Project Structure
 
 ```
 auto-researchtrading-india/
-├── prepare.py              # Data download & backtest engine (FIXED)
-├── backtest.py             # Entry point for backtesting (FIXED)
-├── strategy.py             # YOUR STRATEGY - edit this file
-├── experiment_runner.py    # Experiment tracking & logging
-├── auto_research.py        # Autonomous research loop (Python)
-├── autoresearch.sh         # Autonomous research loop (Bash)
-├── results.tsv             # Experiment results log
-├── pyproject.toml          # Dependencies
-├── README.md               # This file
-├── SETUP.md                # Setup instructions
-├── experiments.json        # Auto-generated experiment log
-├── strategy_best.py        # Best strategy (auto-saved)
-└── .cache/
-    └── autotrader-india/   # Downloaded data cache
-        └── data/
-            ├── RELIANCE_NS_1d.parquet
-            ├── TCS_NS_1d.parquet
-            └── ...
+│
+├── signals.py              ← START HERE every morning
+├── strategy.py             ← EDIT THIS to change strategy logic
+│
+├── backtest.py             ← Test a strategy change
+├── auto_research.py        ← Overnight parameter search
+├── prepare.py              ← Data engine (do not edit)
+├── README.md               ← This file
+│
+├── tools/
+│   ├── run_benchmarks.py   ← Compare strategy vs baselines
+│   ├── export_equity.py    ← Export equity curve to CSV
+│   └── experiment_runner.py← Manual experiment logging
+│
+├── research/
+│   ├── experiments.json    ← Auto-research experiment log
+│   ├── strategy_best.py    ← Best strategy found by auto_research
+│   └── strategy_backups/   ← Per-experiment backups (gitignored)
+│
+├── benchmarks/             ← Reference strategies (do not edit)
+│
+└── docs/
+    ├── SETUP.md            ← Installation instructions
+    └── STRATEGIES.md       ← Notes on what has/hasn't worked
 ```
 
-## Tips for Strategy Development
+---
 
-### 1. Start Simple
-The baseline strategy is already decent. Make small, incremental changes.
+## Known Limitations
 
-### 2. Test One Change at a Time
-Don't change multiple parameters simultaneously - you won't know what worked.
+1. **Survivorship bias** — Nifty 50 stocks are today's winners. Historical returns are slightly inflated because we know these companies survived.
 
-### 3. Watch for Overfitting
-If Sharpe is very high (>3) on validation, you may be overfitting.
+2. **No broker integration** — signals.py tells you what to do, but you place orders manually on Zerodha/Upstox/etc.
 
-### 4. Consider Market Regimes
-Indian markets behave differently in:
-- Bull markets (strong momentum)
-- Bear markets (mean reversion)
-- Sideways markets (range-bound)
+3. **Daily bars only** — the strategy can't time intraday entries. You execute at the open, which may gap from the previous close.
 
-### 5. Sector Rotation
-Different sectors lead at different times. Consider sector-based filters.
+4. **Yahoo Finance data** — generally reliable but occasionally has errors or gaps. Always sanity-check before acting on a signal.
 
-## Common Modifications to Try
+5. **Parameter optimization on val set** — the current strategy parameters were found by running 80+ experiments on 2023–2024 data. The true forward-looking performance is unknown until tested live.
 
-1. **Adjust RSI period**: Try 6, 10, 14 instead of 8
-2. **Change momentum lookback**: Try 5, 15, 20 days instead of 10
-3. **Modify position sizing**: Equal weight vs volatility-adjusted
-4. **Add sector filters**: Reduce positions when sector is weak
-5. **Market regime detection**: Use NIFTY 50 trend as filter
-6. **Add fundamental filters**: Skip stocks with high P/E
-
-## Troubleshooting
-
-### "No data loaded" error
-Run `python prepare.py` first to download historical data.
-
-### Import errors
-Install dependencies: `pip install -e .` or `uv pip install -e .`
-
-### Slow backtests
-- Reduce LOOKBACK_BARS in prepare.py (default: 500)
-- Use fewer symbols for testing
-
-### Yahoo Finance rate limits
-The downloader has built-in delays (0.5s between requests). If still rate-limited, wait a few minutes and retry.
-
-## License
-
-MIT License - See original crypto project at https://github.com/Nunchi-trade/auto-researchtrading
+---
 
 ## Disclaimer
 
-This is a research framework for educational purposes. Past performance does not guarantee future results. Always test strategies thoroughly before deploying real capital.
+This is a research and educational tool. It is not registered investment advice. Past backtest performance does not guarantee future results. Always verify signals independently and use your own judgement. Never risk money you cannot afford to lose.

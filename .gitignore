@@ -33,9 +33,9 @@ ENV/
 *.pkl
 
 # Experiment logs
-experiments.json
-experiments.log
-strategy_backups/
+research/experiments.json
+research/strategy_backups/
+logs/
 
 # OS
 .DS_Store
