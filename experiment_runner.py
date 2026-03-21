@@ -103,7 +103,7 @@ def run_experiment(exp_name: str, description: str):
     experiments.append(experiment)
     save_experiments(experiments)
     
-    print(f"✓ Experiment '{exp_name}' saved to {EXPERIMENTS_FILE}")
+    print(f"[OK] Experiment '{exp_name}' saved to {EXPERIMENTS_FILE}")
     
     # Find best experiment
     best = max(experiments, key=lambda x: x['score'])
