@@ -183,6 +183,21 @@ python backtest.py                  # confirm score improved
 
 Each experiment tweaks one parameter (RSI period, stop multiplier, etc.), backtests it, keeps it if better. Results saved to `research/experiments.json`.
 
+### View progress chart
+
+After running experiments, generate a visual chart:
+
+```bash
+python tools/plot_progress.py
+```
+
+This creates `research/progress.png` showing:
+- Score over time (green dots = kept improvements, red = reverted)
+- Sharpe ratio progression
+- Summary stats: total experiments, best score, improvements kept
+
+Open the PNG to see your research progress at a glance.
+
 ---
 
 ## Try your own ideas
