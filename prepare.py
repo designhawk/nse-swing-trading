@@ -52,7 +52,7 @@ SYMBOLS = [
     "BHARTIARTL", # Bharti Airtel
     "KOTAKBANK",  # Kotak Mahindra Bank
     # Nifty 50 additions
-    "ADANIENT",   # Adani Enterprises
+    # "ADANIENT",   # Excluded: unadjusted bonus/split on 2025-11-17 (+31% gap)
     "ADANIPORTS", # Adani Ports
     "APOLLOHOSP", # Apollo Hospitals
     "ASIANPAINT", # Asian Paints
@@ -86,7 +86,7 @@ SYMBOLS = [
     "SHRIRAMFIN", # Shriram Finance
     "SUNPHARMA",  # Sun Pharma
     "TATACONSUM", # Tata Consumer Products
-    "TATAMOTORS", # Tata Motors
+    # "TATAMOTORS", # Excluded: unadjusted demerger on 2025-10-14 (-40% gap)
     "TATASTEEL",  # Tata Steel
     "TECHM",      # Tech Mahindra
     "TITAN",      # Titan Company
