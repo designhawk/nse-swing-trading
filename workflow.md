@@ -92,8 +92,8 @@ The `--refresh` downloads last night's closing prices. You'll see:
   ---------------------------------------------------------------
   Stock              Buy ~Rs    Stop Rs   Target Rs   Risk %
   ---------------------------------------------------------------
-  HCLTECH.NS        1,603.00   1,490.00   1,829.00    7.1%
-  NTPC.NS             380.95     340.00     422.85    10.7%
+  HCLTECH        1,603.00   1,490.00   1,829.00    7.1%
+  NTPC             380.95     340.00     422.85    10.7%
 
   No exits signaled today.
 
@@ -123,7 +123,7 @@ The `--refresh` downloads last night's closing prices. You'll see:
 ## If you own stocks — track stops every morning
 
 ```bash
-python signals.py --refresh --held HCLTECH.NS NTPC.NS
+python signals.py --refresh --held HCLTECH NTPC
 ```
 
 Shows your current stop price for each holding:
@@ -131,8 +131,8 @@ Shows your current stop price for each holding:
 ```
   YOUR HOLDINGS — current stop prices
   Stock               Last Close    Stop Rs   Gap %
-  HCLTECH.NS          1,650.00     1,510.00   8.5%
-  NTPC.NS               395.00       342.00   13.4%
+  HCLTECH          1,650.00     1,510.00   8.5%
+  NTPC               395.00       342.00   13.4%
 
   Exit immediately if price falls BELOW the stop, any time during the day.
 ```

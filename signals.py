@@ -9,7 +9,7 @@ Reads Friday's (or last available) close prices and tells you:
 Usage:
     python signals.py              # Today's signals (uses cached data)
     python signals.py --refresh    # Re-download latest prices first (do this every morning)
-    python signals.py --held RELIANCE.NS HCLTECH.NS   # Track specific stocks you own
+    python signals.py --held RELIANCE HCLTECH   # Track specific stocks you own
 """
 
 import os
@@ -35,38 +35,24 @@ from prepare import (
 # ---------------------------------------------------------------------------
 
 def refresh_data():
-    """Re-download latest prices for all symbols from Yahoo Finance."""
-    import yfinance as yf
+    """Re-download latest prices for all symbols from Groww API."""
+    from dotenv import load_dotenv
+    load_dotenv()
+    from prepare import _get_groww_client, _download_groww_data, TRAIN_START, TEST_END
 
-    end_date = datetime.today().strftime("%Y-%m-%d")
-    start_date = "2019-01-01"
-
-    print("Refreshing data from Yahoo Finance...")
+    print("Refreshing data from Groww...")
+    groww = _get_groww_client()
     ok = 0
     for symbol in SYMBOLS:
-        filepath = os.path.join(DATA_DIR, f"{symbol.replace('.', '_')}_1d.parquet")
+        filepath = os.path.join(DATA_DIR, f"{symbol.replace('&', '_')}_1d.parquet")
         try:
-            ticker = yf.Ticker(symbol)
-            df = ticker.history(start=start_date, end=end_date, interval="1d")
+            df = _download_groww_data(groww, symbol, TRAIN_START, TEST_END)
             if df.empty:
                 continue
-            df = df.reset_index()
-            df.columns = [str(c).lower().replace(' ', '_') for c in df.columns]
-            col_map = {c: 'timestamp' for c in df.columns if 'date' in c}
-            df = df.rename(columns=col_map)
-            if 'timestamp' not in df.columns:
-                continue
-            df['timestamp'] = pd.to_datetime(df['timestamp']).astype(int) // 10**6
-            for col in ['open', 'high', 'low', 'close', 'volume']:
-                df[col] = pd.to_numeric(df[col], errors='coerce')
-            df = df.dropna(subset=['open', 'high', 'low', 'close'])
-            df['funding_rate'] = 0.0
-            df = df[['timestamp', 'open', 'high', 'low', 'close', 'volume', 'funding_rate']]
             df = df.drop_duplicates(subset=['timestamp']).sort_values('timestamp').reset_index(drop=True)
             os.makedirs(DATA_DIR, exist_ok=True)
             df.to_parquet(filepath, index=False)
             ok += 1
-            time.sleep(0.3)
         except Exception as e:
             print(f"  Warning: {symbol}: {e}")
     print(f"Updated {ok}/{len(SYMBOLS)} symbols.\n")
@@ -80,7 +66,7 @@ def load_all_data():
     """Load all available historical data (not split-filtered)."""
     result = {}
     for symbol in SYMBOLS:
-        filepath = os.path.join(DATA_DIR, f"{symbol.replace('.', '_')}_1d.parquet")
+        filepath = os.path.join(DATA_DIR, f"{symbol.replace('&', '_')}_1d.parquet")
         if not os.path.exists(filepath):
             continue
         try:
@@ -227,7 +213,7 @@ def main():
     parser.add_argument('--refresh', action='store_true',
                         help='Re-download latest prices first (recommended each morning)')
     parser.add_argument('--held', nargs='*', metavar='SYMBOL',
-                        help='Stocks you actually own (e.g. --held RELIANCE.NS HCLTECH.NS)')
+                        help='Stocks you actually own (e.g. --held RELIANCE HCLTECH)')
     args = parser.parse_args()
 
     if args.refresh:
@@ -324,29 +310,28 @@ def main():
         divider()
         found_any = False
         for symbol in sorted(held_symbols):
-            sym_ns = symbol if symbol.endswith('.NS') else symbol + '.NS'
-            if sym_ns not in last_bar_data:
-                print(f"  {sym_ns:<20}  no data")
+            if symbol not in last_bar_data:
+                print(f"  {symbol:<20}  no data")
                 continue
-            bd = last_bar_data[sym_ns]
+            bd = last_bar_data[symbol]
             atr = calc_atr(bd.history, 14)
-            peak = strategy.peak_prices.get(sym_ns, bd.close)
+            peak = strategy.peak_prices.get(symbol, bd.close)
             if atr:
                 stop = peak - ATR_STOP_MULT * atr
                 gap_pct = (bd.close - stop) / bd.close * 100
-                print(f"  {sym_ns:<20}  {bd.close:>10,.2f}  {stop:>9,.2f}  {gap_pct:>6.1f}%")
+                print(f"  {symbol:<20}  {bd.close:>10,.2f}  {stop:>9,.2f}  {gap_pct:>6.1f}%")
             else:
-                print(f"  {sym_ns:<20}  {bd.close:>10,.2f}  (insufficient history)")
+                print(f"  {symbol:<20}  {bd.close:>10,.2f}  (insufficient history)")
             found_any = True
         if not found_any:
             print("  None of your symbols were found.")
         print()
-        print("  Run each morning:  python signals.py --refresh --held RELIANCE.NS HCLTECH.NS")
+        print("  Run each morning:  python signals.py --refresh --held RELIANCE HCLTECH")
 
     else:
         print()
         print("  Holding stocks? Add them to see stop prices:")
-        print("  python signals.py --refresh --held RELIANCE.NS HCLTECH.NS")
+        print("  python signals.py --refresh --held RELIANCE HCLTECH")
 
     # ----------------------------------------------------------------
     # Section 4: Market overview

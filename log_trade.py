@@ -1,8 +1,8 @@
 """Simple trade logger — log your paper or real trades to trades.csv
 
 Usage:
-    python log_trade.py buy HCLTECH.NS --price 1603 --qty 12 --stop 1490 --target 1829
-    python log_trade.py sell HCLTECH.NS --price 1650 --date 2026-03-20
+    python log_trade.py buy HCLTECH --price 1603 --qty 12 --stop 1490 --target 1829
+    python log_trade.py sell HCLTECH --price 1650 --date 2026-03-20
     python log_trade.py list                    # show all open trades
     python log_trade.py summary                 # show P&L summary
 """
@@ -43,7 +43,7 @@ def cmd_buy(symbol, price, qty, stop, target, notes):
     """Log a new buy trade."""
     trades = read_trades()
     # Remove example row if it exists
-    trades = [t for t in trades if t.get('Symbol') != 'HCLTECH.NS' or t.get('Status') != 'OPEN' or t.get('Notes', '').startswith('Example') == False]
+    trades = [t for t in trades if t.get('Symbol') != 'HCLTECH' or t.get('Status') != 'OPEN' or t.get('Notes', '').startswith('Example') == False]
 
     today = datetime.now().strftime('%Y-%m-%d')
     trade = {
@@ -163,7 +163,7 @@ def main():
 
     # buy command
     buy_parser = subparsers.add_parser('buy', help='Log a new buy trade')
-    buy_parser.add_argument('symbol', help='Stock symbol (e.g., HCLTECH.NS)')
+    buy_parser.add_argument('symbol', help='Stock symbol (e.g., HCLTECH)')
     buy_parser.add_argument('--price', type=float, required=True, help='Entry price')
     buy_parser.add_argument('--qty', type=int, default=1, help='Quantity (default: 1)')
     buy_parser.add_argument('--stop', type=float, required=True, help='Stop loss price')
@@ -172,7 +172,7 @@ def main():
 
     # sell command
     sell_parser = subparsers.add_parser('sell', help='Close an open trade')
-    sell_parser.add_argument('symbol', help='Stock symbol (e.g., HCLTECH.NS)')
+    sell_parser.add_argument('symbol', help='Stock symbol (e.g., HCLTECH)')
     sell_parser.add_argument('--price', type=float, required=True, help='Exit price')
     sell_parser.add_argument('--date', help='Exit date (YYYY-MM-DD, default: today)')
     sell_parser.add_argument('--notes', help='Notes about the exit')

@@ -29,7 +29,7 @@ pip install -e .
 
 ### 4. Verify installation
 ```bash
-python -c "import numpy, pandas, yfinance; print('All dependencies installed!')"
+python -c "import numpy, pandas, growwapi; print('All dependencies installed!')"
 ```
 
 ## First Run
@@ -48,7 +48,7 @@ python backtest.py
 Expected output:
 ```
 Loaded ~1500 bars across 10 symbols
-Symbols: ['RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', ...]
+Symbols: ['RELIANCE', 'TCS', 'HDFCBANK', ...]
 
 ---
 score:              X.XXXXXX
@@ -130,7 +130,7 @@ python experiment_runner.py --list
 
 ### Import errors
 ```bash
-pip install numpy pandas scipy yfinance pytz pyarrow requests
+pip install numpy pandas scipy growwapi pytz pyarrow requests
 ```
 
 ### No data error

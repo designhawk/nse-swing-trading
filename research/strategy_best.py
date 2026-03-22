@@ -12,19 +12,19 @@ Strategy: Multi-signal ensemble, long-only, Nifty 50 universe
 import numpy as np
 from prepare import Signal, PortfolioState, BarData
 
-# Nifty 50 large-cap NSE stocks
+# Nifty 50 large-cap NSE stocks (Groww symbols — no .NS suffix)
 ACTIVE_SYMBOLS = [
-    "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS",
-    "HINDUNILVR.NS", "ITC.NS", "SBIN.NS", "BHARTIARTL.NS", "KOTAKBANK.NS",
-    "ADANIENT.NS", "ADANIPORTS.NS", "APOLLOHOSP.NS", "ASIANPAINT.NS",
-    "AXISBANK.NS", "BAJAJ-AUTO.NS", "BAJAJFINSV.NS", "BAJFINANCE.NS",
-    "BPCL.NS", "BRITANNIA.NS", "CIPLA.NS", "COALINDIA.NS", "DIVISLAB.NS",
-    "DRREDDY.NS", "EICHERMOT.NS", "GRASIM.NS", "HCLTECH.NS", "HDFCLIFE.NS",
-    "HEROMOTOCO.NS", "HINDALCO.NS", "INDUSINDBK.NS", "JSWSTEEL.NS",
-    "LT.NS", "LTIM.NS", "M&M.NS", "MARUTI.NS", "NESTLEIND.NS",
-    "NTPC.NS", "ONGC.NS", "POWERGRID.NS", "SBILIFE.NS", "SHRIRAMFIN.NS",
-    "SUNPHARMA.NS", "TATACONSUM.NS", "TATAMOTORS.NS", "TATASTEEL.NS",
-    "TECHM.NS", "TITAN.NS", "TRENT.NS", "ULTRACEMCO.NS", "WIPRO.NS",
+    "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK",
+    "HINDUNILVR", "ITC", "SBIN", "BHARTIARTL", "KOTAKBANK",
+    "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT",
+    "AXISBANK", "BAJAJ-AUTO", "BAJAJFINSV", "BAJFINANCE",
+    "BPCL", "BRITANNIA", "CIPLA", "COALINDIA", "DIVISLAB",
+    "DRREDDY", "EICHERMOT", "GRASIM", "HCLTECH", "HDFCLIFE",
+    "HEROMOTOCO", "HINDALCO", "INDUSINDBK", "JSWSTEEL",
+    "LT", "LTIM", "M&M", "MARUTI", "NESTLEIND",
+    "NTPC", "ONGC", "POWERGRID", "SBILIFE", "SHRIRAMFIN",
+    "SUNPHARMA", "TATACONSUM", "TATAMOTORS", "TATASTEEL",
+    "TECHM", "TITAN", "TRENT", "ULTRACEMCO", "WIPRO",
 ]
 
 # Equal weight: 2% per stock (50 stocks * 2% = 100% max deployed)
@@ -35,24 +35,24 @@ SHORT_WINDOW = 4      # 1 week
 MED_WINDOW = 15        # ~2 weeks
 MED2_WINDOW = 20      # 4 weeks
 LONG_WINDOW = 40      # 1.5 months
-EMA_FAST = 12
-EMA_SLOW = 30
+EMA_FAST = 5
+EMA_SLOW = 26
 RSI_PERIOD = 14
-RSI_BULL = 55
+RSI_BULL = 45
 RSI_OVERBOUGHT = 75   # Exit long above this
 
 MACD_FAST = 16
 MACD_SLOW = 23
-MACD_SIGNAL = 7
+MACD_SIGNAL = 12
 
 BB_PERIOD = 7
 
 # Risk management
-VOL_LOOKBACK = 20              # Volatility lookback
-TARGET_VOL = 0.012             # 1.5% daily vol target
+VOL_LOOKBACK = 30              # Volatility lookback
+TARGET_VOL = 0.015             # 1.5% daily vol target
 ATR_LOOKBACK = 14              # ATR lookback
-ATR_STOP_MULT = 5.0            # Trailing stop multiplier
-BASE_THRESHOLD = 0.01          # Momentum threshold (1%)
+ATR_STOP_MULT = 7.0            # Trailing stop multiplier
+BASE_THRESHOLD = 0.012          # Momentum threshold (1%)
 
 # Position management
 COOLDOWN_BARS = 3              # Bars to wait after exit

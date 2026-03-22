@@ -52,19 +52,19 @@ The `--refresh` flag downloads last night's closing prices. Output:
   ---------------------------------------------------------------
   Stock               Last Close    Suggested Size*
   ---------------------------------------------------------------
-  HCLTECH.NS          Rs  1,603.58  Rs 20,000 (~12 shares)
-  NTPC.NS             Rs    380.95  Rs 20,000 (~52 shares)
+  HCLTECH          Rs  1,603.58  Rs 20,000 (~12 shares)
+  NTPC             Rs    380.95  Rs 20,000 (~52 shares)
 
   EXIT: No exits signaled today.
 
   TIP: To see stop prices for stocks you own, run:
-  python signals.py --held RELIANCE.NS TCS.NS
+  python signals.py --held RELIANCE TCS
 ```
 
 **If you own stocks, track your stops:**
 
 ```bash
-python signals.py --held RELIANCE.NS HCLTECH.NS NTPC.NS
+python signals.py --held RELIANCE HCLTECH NTPC
 ```
 
 This shows exactly what price each stock needs to fall below before you exit.
@@ -200,8 +200,8 @@ score = sharpe × √(min(trades/50, 1.0)) − drawdown_penalty − turnover_pen
 
 ## Data
 
-- **Source:** Yahoo Finance (free, adjusted for splits/dividends)
-- **Universe:** 49 Nifty 50 stocks (TATAMOTORS.NS excluded — Yahoo Finance issues)
+- **Source:** Groww (free, adjusted for splits/dividends)
+- **Universe:** 49 Nifty 50 stocks (TATAMOTORS excluded — Groww issues)
 - **History:** 2019–present (auto-updated when you run `--refresh`)
 - **Splits:**
   - Train: 2019–2022 (strategy development)
@@ -250,7 +250,7 @@ auto-researchtrading-india/
 
 3. **Daily bars only** — the strategy can't time intraday entries. You execute at the open, which may gap from the previous close.
 
-4. **Yahoo Finance data** — generally reliable but occasionally has errors or gaps. Always sanity-check before acting on a signal.
+4. **Groww data** — generally reliable but occasionally has errors or gaps. Always sanity-check before acting on a signal.
 
 5. **Parameter optimization on val set** — the current strategy parameters were found by running 80+ experiments on 2023–2024 data. The true forward-looking performance is unknown until tested live.
 

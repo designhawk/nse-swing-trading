@@ -102,7 +102,7 @@ The loop runs until interrupted by the user.
 
 1. **Only edit strategy.py** - Never modify prepare.py, backtest.py, or benchmarks/
 2. **One change at a time** - Don't change multiple parameters simultaneously
-3. **No new dependencies** - Only use numpy, pandas, scipy, yfinance, pytz
+3. **No new dependencies** - Only use numpy, pandas, scipy, growwapi, pytz
 4. **Log everything** - Every experiment must be recorded in results.tsv
 5. **Keep or revert** - If it doesn't improve, revert immediately
 

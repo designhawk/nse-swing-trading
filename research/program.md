@@ -1,7 +1,7 @@
 # NSE Swing Trading — Agent Instructions
 
 ## Goal
-Maximize the backtest score on the validation set (2023–2024) by tuning strategy parameters.
+Maximize the backtest score on the validation set (2024–2025) by tuning strategy parameters.
 
 ## Files You Can Edit
 - `strategy.py` — ONLY this file. Contains parameters and signal logic.
@@ -47,7 +47,7 @@ Maximize the backtest score on the validation set (2023–2024) by tuning strate
 - Keep changes small (10-20% adjustments)
 - Never introduce new dependencies
 - Never change file paths or infrastructure
-- Never look at test set data (2025–2026)
+- Never look at test set data (2026)
 
 ## Good Parameters to Tune
 | Parameter | Current | Range to try |

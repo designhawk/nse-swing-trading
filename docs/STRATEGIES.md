@@ -21,8 +21,8 @@ This document tracks the evolution of trading strategies through autoresearch ex
 ### Strategy Architecture
 
 **Symbols:** 10 NSE Large-cap stocks
-- RELIANCE.NS, TCS.NS, HDFCBANK.NS, INFY.NS, ICICIBANK.NS
-- HINDUNILVR.NS, ITC.NS, SBIN.NS, BHARTIARTL.NS, KOTAKBANK.NS
+- RELIANCE, TCS, HDFCBANK, INFY, ICICIBANK
+- HINDUNILVR, ITC, SBIN, BHARTIARTL, KOTAKBANK
 
 **Timeframe:** Daily bars
 

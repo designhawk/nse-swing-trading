@@ -35,6 +35,7 @@ ENV/
 # Experiment logs
 research/experiments.json
 research/strategy_backups/
+research/autoresearch.log
 logs/
 
 # OS
@@ -44,3 +45,6 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+
+# Credentials
+.env

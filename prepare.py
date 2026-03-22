@@ -1,10 +1,10 @@
 """
 Autotrader backtesting engine for Indian NSE stocks. Fixed evaluation harness — DO NOT MODIFY.
-Downloads historical data from Yahoo Finance, runs backtests, computes scores.
+Downloads historical data from Groww Trade API, runs backtests, computes scores.
 
 Usage:
     python prepare.py                  # download data
-    python prepare.py --symbols RELIANCE.NS    # download specific symbols
+    python prepare.py --symbols RELIANCE    # download specific symbols
 """
 
 import os
@@ -14,11 +14,15 @@ import math
 import signal
 import argparse
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
 import requests
 import pyarrow.parquet as pq
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ---------------------------------------------------------------------------
 # Constants (fixed, do not modify)
@@ -34,69 +38,69 @@ MAX_LEVERAGE = 1               # No leverage for cash market (1x)
 LOOKBACK_BARS = 500            # history buffer provided to strategy
 BAR_INTERVAL = "1d"            # Daily bars
 
-# Nifty 50 large-cap NSE stocks
+# Nifty 50 large-cap NSE stocks (Groww symbols — no .NS suffix)
 SYMBOLS = [
     # Original 10
-    "RELIANCE.NS",   # Reliance Industries
-    "TCS.NS",        # Tata Consultancy Services
-    "HDFCBANK.NS",   # HDFC Bank
-    "INFY.NS",       # Infosys
-    "ICICIBANK.NS",  # ICICI Bank
-    "HINDUNILVR.NS", # Hindustan Unilever
-    "ITC.NS",        # ITC Limited
-    "SBIN.NS",       # State Bank of India
-    "BHARTIARTL.NS", # Bharti Airtel
-    "KOTAKBANK.NS",  # Kotak Mahindra Bank
+    "RELIANCE",   # Reliance Industries
+    "TCS",        # Tata Consultancy Services
+    "HDFCBANK",   # HDFC Bank
+    "INFY",       # Infosys
+    "ICICIBANK",  # ICICI Bank
+    "HINDUNILVR", # Hindustan Unilever
+    "ITC",        # ITC Limited
+    "SBIN",       # State Bank of India
+    "BHARTIARTL", # Bharti Airtel
+    "KOTAKBANK",  # Kotak Mahindra Bank
     # Nifty 50 additions
-    "ADANIENT.NS",   # Adani Enterprises
-    "ADANIPORTS.NS", # Adani Ports
-    "APOLLOHOSP.NS", # Apollo Hospitals
-    "ASIANPAINT.NS", # Asian Paints
-    "AXISBANK.NS",   # Axis Bank
-    "BAJAJ-AUTO.NS", # Bajaj Auto
-    "BAJAJFINSV.NS", # Bajaj Finserv
-    "BAJFINANCE.NS", # Bajaj Finance
-    "BPCL.NS",       # BPCL
-    "BRITANNIA.NS",  # Britannia Industries
-    "CIPLA.NS",      # Cipla
-    "COALINDIA.NS",  # Coal India
-    "DIVISLAB.NS",   # Divi's Laboratories
-    "DRREDDY.NS",    # Dr. Reddy's
-    "EICHERMOT.NS",  # Eicher Motors
-    "GRASIM.NS",     # Grasim Industries
-    "HCLTECH.NS",    # HCL Technologies
-    "HDFCLIFE.NS",   # HDFC Life
-    "HEROMOTOCO.NS", # Hero MotoCorp
-    "HINDALCO.NS",   # Hindalco Industries
-    "INDUSINDBK.NS", # IndusInd Bank
-    "JSWSTEEL.NS",   # JSW Steel
-    "LT.NS",         # Larsen & Toubro
-    "LTIM.NS",       # LTIMindtree
-    "M&M.NS",        # Mahindra & Mahindra
-    "MARUTI.NS",     # Maruti Suzuki
-    "NESTLEIND.NS",  # Nestle India
-    "NTPC.NS",       # NTPC
-    "ONGC.NS",       # ONGC
-    "POWERGRID.NS",  # Power Grid Corp
-    "SBILIFE.NS",    # SBI Life Insurance
-    "SHRIRAMFIN.NS", # Shriram Finance
-    "SUNPHARMA.NS",  # Sun Pharma
-    "TATACONSUM.NS", # Tata Consumer Products
-    "TATAMOTORS.NS",  # Tata Motors (Yahoo Finance sometimes fails — skip if no data)
-    "TATASTEEL.NS",  # Tata Steel
-    "TECHM.NS",      # Tech Mahindra
-    "TITAN.NS",      # Titan Company
-    "TRENT.NS",      # Trent
-    "ULTRACEMCO.NS", # UltraTech Cement
-    "WIPRO.NS",      # Wipro
+    "ADANIENT",   # Adani Enterprises
+    "ADANIPORTS", # Adani Ports
+    "APOLLOHOSP", # Apollo Hospitals
+    "ASIANPAINT", # Asian Paints
+    "AXISBANK",   # Axis Bank
+    "BAJAJ-AUTO", # Bajaj Auto
+    "BAJAJFINSV", # Bajaj Finserv
+    "BAJFINANCE", # Bajaj Finance
+    "BPCL",       # BPCL
+    "BRITANNIA",  # Britannia Industries
+    "CIPLA",      # Cipla
+    "COALINDIA",  # Coal India
+    "DIVISLAB",   # Divi's Laboratories
+    "DRREDDY",    # Dr. Reddy's
+    "EICHERMOT",  # Eicher Motors
+    "GRASIM",     # Grasim Industries
+    "HCLTECH",    # HCL Technologies
+    "HDFCLIFE",   # HDFC Life
+    "HEROMOTOCO", # Hero MotoCorp
+    "HINDALCO",   # Hindalco Industries
+    "INDUSINDBK", # IndusInd Bank
+    "JSWSTEEL",   # JSW Steel
+    "LT",         # Larsen & Toubro
+    "LTIM",       # LTIMindtree
+    "M&M",        # Mahindra & Mahindra
+    "MARUTI",     # Maruti Suzuki
+    "NESTLEIND",  # Nestle India
+    "NTPC",       # NTPC
+    "ONGC",       # ONGC
+    "POWERGRID",  # Power Grid Corp
+    "SBILIFE",    # SBI Life Insurance
+    "SHRIRAMFIN", # Shriram Finance
+    "SUNPHARMA",  # Sun Pharma
+    "TATACONSUM", # Tata Consumer Products
+    "TATAMOTORS", # Tata Motors
+    "TATASTEEL",  # Tata Steel
+    "TECHM",      # Tech Mahindra
+    "TITAN",      # Titan Company
+    "TRENT",      # Trent
+    "ULTRACEMCO", # UltraTech Cement
+    "WIPRO",      # Wipro
 ]
 
-# Date splits (5 years: 2019-2024)
-TRAIN_START = "2019-01-01"
-TRAIN_END = "2023-01-01"
-VAL_START = "2023-01-01"
-VAL_END = "2024-12-31"
-TEST_START = "2025-01-01"
+# Date splits (2020-2026)
+TRAIN_START = "2020-01-01"
+TRAIN_END = "2024-01-01"
+VAL_START = "2024-01-01"
+VAL_END = "2025-12-31"
+TEST_START = "2026-01-01"
 TEST_END = "2026-12-31"
 
 DAYS_PER_YEAR = 252            # NSE trading days per year
@@ -155,74 +159,91 @@ class BacktestResult:
 # Data download
 # ---------------------------------------------------------------------------
 
-def _download_yfinance_data(symbol: str, start: str, end: str) -> pd.DataFrame:
-    """Download daily OHLCV from Yahoo Finance for NSE symbols."""
+def _get_groww_client():
+    """Authenticate with Groww API using credentials from .env.
+    Supports both TOTP flow (GROWW_TOTP_SECRET set) and API key+secret flow.
+    """
+    from growwapi import GrowwAPI
+    api_key = os.environ.get("GROWW_API_KEY")
+    api_secret = os.environ.get("GROWW_API_SECRET")
+    totp_secret = os.environ.get("GROWW_TOTP_SECRET")
+
+    if not api_key:
+        raise ValueError("GROWW_API_KEY must be set in .env")
+
+    if totp_secret:
+        # TOTP flow (no daily expiry)
+        import pyotp
+        totp = pyotp.TOTP(totp_secret).now()
+        access_token = GrowwAPI.get_access_token(api_key=api_key, totp=totp)
+    else:
+        # API key + secret flow
+        if not api_secret:
+            raise ValueError("GROWW_API_SECRET must be set in .env")
+        access_token = GrowwAPI.get_access_token(api_key=api_key, secret=api_secret)
+
+    return GrowwAPI(access_token)
+
+
+def _download_groww_data(groww, symbol: str, start: str, end: str) -> pd.DataFrame:
+    """Download daily OHLCV via Groww get_historical_candle_data (deprecated but functional).
+    Supports up to 1080 days per request for daily (1440 min) interval per official docs."""
     try:
-        import yfinance as yf
-        
-        ticker = yf.Ticker(symbol)
-        # Download data
-        df = ticker.history(start=start, end=end, interval="1d")
-        
-        if df.empty:
-            print(f"  {symbol}: No data returned from Yahoo Finance")
+        start_dt = datetime.strptime(start, "%Y-%m-%d")
+        end_dt = min(datetime.strptime(end, "%Y-%m-%d"), datetime.now())
+
+        all_candles = []
+        chunk_start = start_dt
+        while chunk_start < end_dt:
+            chunk_end = min(chunk_start + timedelta(days=1079), end_dt)  # 1080-day limit for daily
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", DeprecationWarning)
+                resp = groww.get_historical_candle_data(
+                    trading_symbol=symbol,
+                    exchange=groww.EXCHANGE_NSE,
+                    segment=groww.SEGMENT_CASH,
+                    start_time=chunk_start.strftime("%Y-%m-%d 00:00:00"),
+                    end_time=chunk_end.strftime("%Y-%m-%d 23:59:59"),
+                    interval_in_minutes=1440,  # daily
+                )
+            candles = resp.get("candles", []) if isinstance(resp, dict) else []
+            all_candles.extend(candles)
+            chunk_start = chunk_end + timedelta(days=1)
+            time.sleep(0.3)
+
+        if not all_candles:
+            print(f"  {symbol}: No data returned from Groww")
             return pd.DataFrame()
-        
-        # Reset index and standardize columns
-        df = df.reset_index()
-        
-        # Rename columns to lowercase
-        df.columns = [str(c).lower().replace(' ', '_') for c in df.columns]
-        
-        # Handle different column name formats
-        column_mapping = {}
-        for col in df.columns:
-            if 'date' in col or col == 'index':
-                column_mapping[col] = 'timestamp'
-            elif col in ['open', 'high', 'low', 'close', 'volume']:
-                column_mapping[col] = col
-        
-        df = df.rename(columns=column_mapping)
-        
-        # Ensure required columns exist
-        required_cols = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
-        for col in required_cols:
-            if col not in df.columns:
-                print(f"  {symbol}: Missing required column '{col}'")
-                return pd.DataFrame()
-        
-        # Convert timestamp to milliseconds
-        df['timestamp'] = pd.to_datetime(df['timestamp']).astype(int) // 10**6
-        
-        # Ensure numeric columns
-        for col in ['open', 'high', 'low', 'close', 'volume']:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-        
-        # Drop rows with NaN values
-        df = df.dropna(subset=['open', 'high', 'low', 'close'])
-        
-        # Add dummy funding_rate column (0 for stocks)
-        df['funding_rate'] = 0.0
-        
-        return df[['timestamp', 'open', 'high', 'low', 'close', 'volume', 'funding_rate']]
-        
+
+        # Each candle: [epoch_seconds, open, high, low, close, volume]
+        # Groww timestamps are IST midnight (UTC-5:30h). Add 19800s to align to UTC midnight
+        # so load_data date comparisons work correctly.
+        df = pd.DataFrame(all_candles, columns=["timestamp", "open", "high", "low", "close", "volume"])
+        df["timestamp"] = df["timestamp"].astype(int) * 1000 + 19800000  # IST → UTC ms
+        for col in ["open", "high", "low", "close", "volume"]:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+        df = df.dropna(subset=["open", "high", "low", "close"])
+        df["funding_rate"] = 0.0
+        return df[["timestamp", "open", "high", "low", "close", "volume", "funding_rate"]]
+
     except Exception as e:
         print(f"  {symbol}: Error downloading data - {e}")
         return pd.DataFrame()
 
 
 def download_data(symbols=None):
-    """Download historical OHLCV data for all symbols from Yahoo Finance."""
+    """Download historical OHLCV data for all symbols from Groww Trade API."""
     os.makedirs(DATA_DIR, exist_ok=True)
     if symbols is None:
         symbols = SYMBOLS
 
-    # Use fixed date range for consistent data
+    groww = _get_groww_client()
     start_date = TRAIN_START
     end_date = TEST_END
 
     for symbol in symbols:
-        filepath = os.path.join(DATA_DIR, f"{symbol.replace('.', '_')}_1d.parquet")
+        filepath = os.path.join(DATA_DIR, f"{symbol.replace('&', '_')}_1d.parquet")
         if os.path.exists(filepath):
             try:
                 existing = pd.read_parquet(filepath)
@@ -231,22 +252,17 @@ def download_data(symbols=None):
             except:
                 pass
 
-        print(f"  {symbol}: downloading from Yahoo Finance...")
-        
-        df = _download_yfinance_data(symbol, start_date, end_date)
-        
+        print(f"  {symbol}: downloading from Groww...")
+
+        df = _download_groww_data(groww, symbol, start_date, end_date)
+
         if df.empty or len(df) < 100:
             print(f"  {symbol}: Insufficient data ({len(df)} bars), skipping")
             continue
 
-        # Ensure sorted and no duplicates
         df = df.drop_duplicates(subset=["timestamp"]).sort_values("timestamp").reset_index(drop=True)
-        
         df.to_parquet(filepath, index=False)
         print(f"  {symbol}: saved {len(df)} bars to {filepath}")
-        
-        # Be nice to Yahoo Finance API
-        time.sleep(0.5)
 
 
 def load_data(split: str = "val") -> dict:
@@ -267,7 +283,7 @@ def load_data(split: str = "val") -> dict:
 
     result = {}
     for symbol in SYMBOLS:
-        filepath = os.path.join(DATA_DIR, f"{symbol.replace('.', '_')}_1d.parquet")
+        filepath = os.path.join(DATA_DIR, f"{symbol.replace('&', '_')}_1d.parquet")
         if not os.path.exists(filepath):
             print(f"  Warning: {symbol} data file not found")
             continue
@@ -588,7 +604,7 @@ if __name__ == "__main__":
     print(f"Cache directory: {CACHE_DIR}")
     print()
 
-    print("Downloading data from Yahoo Finance...")
+    print("Downloading data from Groww...")
     print("This may take a few minutes...")
     print()
     download_data(args.symbols)
