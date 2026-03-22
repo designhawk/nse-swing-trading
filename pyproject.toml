@@ -28,6 +28,7 @@ dependencies = [
     "pyarrow>=12.0.0",
     "growwapi>=0.1.0",
     "python-dotenv>=1.0.0",
+    "pyotp>=2.9.0",
     "pytz>=2023.3",
 ]
 
